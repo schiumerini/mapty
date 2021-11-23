@@ -80,7 +80,13 @@ class App {
   #workouts = [];
 
   constructor() {
+    // Get user's position
     this._getPosition();
+
+    // Get data from local storage
+    this._getLocalStorage();
+
+    // Attach event handlers
     form.addEventListener('submit', this._newWorkout.bind(this));
     inputType.addEventListener('change', this._toggleElevationField.bind(this));
     containerWorkouts.addEventListener(
@@ -115,6 +121,10 @@ class App {
 
     // Handling clicks on map
     this.#map.on('click', this._showForm.bind(this));
+
+    this.#workouts.forEach(workout => {
+      this._renderWorkoutMarker(workout);
+    });
   }
 
   _showForm(mapE) {
@@ -142,7 +152,7 @@ class App {
     });
 
     // Using the public interface
-    workout._click();
+    //workout._click(); // Will not work unless refactor data in "_getLocalStorage" to be reverted back to running/cycling classes
   }
 
   _newWorkout(e) {
@@ -185,6 +195,9 @@ class App {
 
     // Hide form + Clear input fields
     this._hideForm();
+
+    // Set local storage to all workouts
+    this._setLocalStorage();
   }
 
   _renderWorkoutMarker(workout) {
@@ -260,6 +273,25 @@ class App {
     form.style.display = 'none';
     form.classList.add('hidden');
     setTimeout(() => (form.style.display = 'grid'), 1000);
+  }
+
+  _setLocalStorage() {
+    localStorage.setItem('workouts', JSON.stringify(this.#workouts));
+  }
+
+  _getLocalStorage() {
+    const data = JSON.parse(localStorage.getItem('workouts'));
+
+    if (!data) return;
+    this.#workouts = data;
+    this.#workouts.forEach(workout => {
+      this._renderWorkout(workout);
+    });
+  }
+
+  reset() {
+    localStorage.removeItem('workouts');
+    location.reload;
   }
 }
 
