@@ -131,6 +131,25 @@ class App {
     this.#mapEvent = mapE;
     form.classList.remove('hidden');
     inputDistance.focus();
+    this._clearForm();
+  }
+
+  _showEditForm(mapE, type, dist, min, cad, ele) {
+    this._showForm(mapE);
+    inputType.value = type;
+    inputDistance.value = dist;
+    inputDuration.value = min;
+    if (!ele) {
+      inputCadence.value = cad;
+      inputElevation.closest('.form__row').classList.add('form__row--hidden');
+      inputCadence.closest('.form__row').classList.remove('form__row--hidden');
+    } else {
+      inputElevation.value = ele;
+      inputElevation
+        .closest('.form__row')
+        .classList.remove('form__row--hidden');
+      inputCadence.closest('.form__row').classList.add('form__row--hidden');
+    }
   }
 
   _toggleElevationField() {
@@ -139,6 +158,25 @@ class App {
   }
 
   _focusWorkoutMarker(e) {
+    if (e.target.id === 'delete-button') {
+      const workout = this.#workouts.find(
+        work => work.id === e.target.closest('.workout').dataset.id
+      );
+      this._deleteWorkout(workout);
+      return;
+    }
+    if (e.target.id === 'edit-button') {
+      const workout = this.#workouts.find(
+        work => work.id === e.target.closest('.workout').dataset.id
+      );
+      this._editWorkout(workout);
+      return;
+    }
+    if (e.target.id === 'deleteAll-button') {
+      this.reset();
+      return;
+    }
+
     const workoutEl = e.target.closest('.workout');
     if (!workoutEl) return;
     const workout = this.#workouts.find(
@@ -151,6 +189,14 @@ class App {
       },
     });
 
+    this._showEditForm(
+      e,
+      workout.type,
+      workout.distance,
+      workout.duration,
+      workout.cadence,
+      workout.elevationGain
+    );
     // Using the public interface
     //workout._click(); // Will not work unless refactor data in "_getLocalStorage" to be reverted back to running/cycling classes
   }
@@ -187,6 +233,13 @@ class App {
     // Add new object to workout array
     this.#workouts.push(workout);
 
+    // Sort by distance
+    this._sortWorkouts();
+    this.#map.remove();
+    containerWorkouts.querySelectorAll('.workout').forEach(e => e.remove());
+    this._getPosition();
+    this._getLocalStorage();
+
     // Render workout on map as marker
     this._renderWorkoutMarker(workout);
 
@@ -221,7 +274,7 @@ class App {
   _renderWorkout(workout) {
     let html = `
     <li class="workout workout--${workout.type}" data-id="${workout.id}">
-      <h2 class="workout__title">${workout.description}</h2>
+      <h2 class="workout__title">${workout.description}<button type="submit" id="delete-button">Delete</button><button type="submit" id="edit-button">Edit</button></h2>
       <div class="workout__details">
         <span class="workout__icon">${workout.icon}</span>
         <span class="workout__value">${workout.distance}</span>
@@ -265,14 +318,18 @@ class App {
   }
 
   _hideForm() {
+    this._clearForm();
+    form.style.display = 'none';
+    form.classList.add('hidden');
+    setTimeout(() => (form.style.display = 'grid'), 1000);
+  }
+
+  _clearForm() {
     inputDistance.value =
       inputDuration.value =
       inputCadence.value =
       inputElevation.value =
         '';
-    form.style.display = 'none';
-    form.classList.add('hidden');
-    setTimeout(() => (form.style.display = 'grid'), 1000);
   }
 
   _setLocalStorage() {
@@ -289,10 +346,70 @@ class App {
     });
   }
 
+  _sortWorkouts() {
+    console.log('Workouts Sorted');
+    this.#workouts.sort((a, b) => a.distance - b.distance);
+    this._setLocalStorage();
+  }
+
+  _editWorkout(workout) {
+    console.log('Workout Editted');
+    let data = JSON.parse(localStorage.getItem('workouts'));
+    data.forEach(function (work) {
+      if (work.id === workout.id) {
+        work.distance = inputDistance.value;
+        work.duration = inputDuration.value;
+        work.cadence = inputCadence.value;
+        work.elevationGain = inputElevation.value;
+        if (work.type === 'running') {
+          work.pace = work.duration / work.distance;
+        } else {
+          work.speed = work.distance / (work.duration / 60);
+        }
+      }
+    });
+    this.#workouts = data;
+    this._setLocalStorage();
+    this._sortWorkouts();
+    this.#map.remove();
+    containerWorkouts.querySelectorAll('.workout').forEach(e => e.remove());
+    this._getPosition();
+    this._getLocalStorage();
+  }
+
+  _deleteWorkout(workout) {
+    console.log('Workout Deleted');
+    let data = JSON.parse(localStorage.getItem('workouts'));
+    data = data.filter(work => work.id != workout.id);
+    this.#workouts = data;
+    this._setLocalStorage();
+    this.#map.remove();
+    containerWorkouts.querySelectorAll('.workout').forEach(e => e.remove());
+    this._getPosition();
+    this._getLocalStorage();
+  }
+
   reset() {
     localStorage.removeItem('workouts');
     location.reload;
+    this.#workouts = [];
+    this._setLocalStorage();
+    this.#map.remove();
+    containerWorkouts.querySelectorAll('.workout').forEach(e => e.remove());
+    this._getPosition();
+    this._getLocalStorage();
   }
 }
 
 const app = new App();
+
+//////////////////////////
+// Additional feature challenges:
+// - [x] 1) Edit/Delete/DeleteAll workout(s)
+// - [x] 2) Sort workouts by a certain field (e.g. distance)
+// - [x] 3) Rebuild Running/Cycling objects from the Local Storage
+// - [ ] 4) Add more realistic Error messages
+// - [ ] 5) Ability to position the map to show all workouts [very hard]
+// - [ ] 6) Ability to draw lines and shapes instead of just points [very hard]
+// - [ ] 7) Geocode location from coordinates ("Run in Faro, Portuhal") [only after asynchronous JavaScript section]
+// - [ ] 8) Display weather data for workout time and place [only after asynchronous JavaScript section]

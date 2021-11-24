@@ -189,6 +189,25 @@ a:visited {
   color: var(--color-light--2);
 }
 
+button {
+  width: 40px;
+  padding: 0px;
+  margin: 0 3px;
+  background-color: #f80606;
+  outline: none;
+  border: 1px solid #ff0000;
+  box-shadow: 2px 2px 2px #3f3f3f;
+  float: right;
+}
+
+button:hover {
+  box-shadow: 2px 2px 3px;
+}
+
+button:active {
+  box-shadow: 1px 1px 3px;
+}
+
 /* MAP */
 #map {
   flex: 1;
